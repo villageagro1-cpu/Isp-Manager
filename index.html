@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ISP Manager Pro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2563eb">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+    :root { --primary: #2563eb; --success: #16a34a; --danger: #dc2626; --wa: #25d366; --bg: #f8fafc; --expense: #f97316; }
+    body { font-family: system-ui, sans-serif; padding: 10px; background: var(--bg); color: #1e293b; max-width: 600px; margin: auto; }
+    input, button, select { padding: 12px; margin: 5px 0; width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; }
+    button { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; }
+    .card { background: white; padding: 12px; margin-top: 10px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 5px solid var(--primary); }
+    .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: #fff; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; }
+    .stat-label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: bold; }
+    .stat-val { font-size: 14px; font-weight: bold; }
+    .tabs { display: flex; gap: 5px; margin-bottom: 15px; }
+    .tab-btn { background: #e2e8f0; color: #475569; flex: 1; font-size: 12px; padding: 10px 5px; border-radius: 8px; border:none; }
+    .tab-active { background: var(--primary); color: white; }
+    .filter-box { background: #fff; padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #ddd; }
+    .ledger-row { display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px solid #eee; padding: 4px 0; }
+</style>
+</head>
+<body>
+<div id="loginDiv">
+    <h3 style="text-align: center;">📡 ISP Manager Login</h3>
+    <input type="password" id="pass" placeholder="Enter PIN (1234)">
+    <button onclick="login()">Access System</button>
+</div>
+<div id="app" style="display:none">
+    <div class="report-grid" id="report"></div>
+    <div class="tabs" style="margin-top:15px;">
+        <button class="tab-btn tab-active" onclick="switchTab('billing', event)">Billing</button>
+        <button class="tab-btn" onclick="switchTab('expenses', event)">Expenses</button>
+        <button class="tab-btn" onclick="switchTab('settings', event)">Settings</button>
+    </div>
+    <div id="billingTab">
+        <button type="button" style="background: #6366f1;" onclick="getContact()">📇 Select from Contacts</button>
+        <input type="text" id="name" placeholder="Customer Name">
+        <input type="number" id="phone" placeholder="WhatsApp (923...)">
+        <input type="number" id="price" placeholder="Monthly Rate">
+        <select id="areaSelect"></select>
+        <button onclick="addCustomer()">Add Customer</button>
+        <hr><input type="date" id="dueDate">
+        <button style="background: #7c3aed" onclick="generateBills()">Generate Bills (With Arrears)</button>
+        <hr>
+        <div class="filter-box">
+            <input type="text" id="searchName" placeholder="Search by name..." onkeyup="displayCustomers()">
+            <select id="filterVillage" onchange="displayCustomers()"><option value="All">All Villages</option></select>
+        </div>
+        <div id="customerList"></div>
+    </div>
+    <div id="expensesTab" style="display:none">
+        <input type="text" id="expNote" placeholder="Expense Detail"><input type="number" id="expAmount" placeholder="Amount">
+        <button style="background: var(--expense)" onclick="addExpense()">Save Expense</button>
+        <div id="expenseList"></div>
+    </div>
+    <div id="settingsTab" style="display:none">
+        <h3>📍 Manage Villages</h3>
+        <input type="text" id="newVillage" placeholder="Village Name"><button onclick="addVillage()">Add Village</button>
+        <div id="villageSettingsList"></div>
+        <hr><button style="background: #475569" onclick="backup()">Download Backup</button>
+        <input type="file" onchange="restore(event)">
+    </div>
+</div>
+<script>
+let password = "1234";
+let customers = JSON.parse(localStorage.getItem("isp_pro_cust")) || [];
+let invoices = JSON.parse(localStorage.getItem("isp_pro_inv")) || [];
+let expenses = JSON.parse(localStorage.getItem("isp_pro_exp")) || [];
+let villages = JSON.parse(localStorage.getItem("isp_pro_vill")) || ["Village 1"];
+
+function save() {
+    localStorage.setItem("isp_pro_cust", JSON.stringify(customers));
+    localStorage.setItem("isp_pro_inv", JSON.stringify(invoices));
+    localStorage.setItem("isp_pro_exp", JSON.stringify(expenses));
+    localStorage.setItem("isp_pro_vill", JSON.stringify(villages));
+    updateReport();
+}
+
+function login() {
+    if(document.getElementById("pass").value === password) {
+        document.getElementById("loginDiv").style.display = "none";
+        document.getElementById("app").style.display = "block";
+        updateVillageUI(); displayCustomers(); displayExpenses(); updateReport();
+    } else { alert("Wrong PIN"); }
+}
+
+function switchTab(tab, e) {
+    document.getElementById('billingTab').style.display = tab === 'billing' ? 'block' : 'none';
+    document.getElementById('expensesTab').style.display = tab === 'expenses' ? 'block' : 'none';
+    document.getElementById('settingsTab').style.display = tab === 'settings' ? 'block' : 'none';
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+    e.target.classList.add('tab-active');
+}
+
+function updateVillageUI() {
+    const opts = villages.map(v => `<option value="${v}">${v}</option>`).join('');
+    document.getElementById("areaSelect").innerHTML = opts;
+    document.getElementById("filterVillage").innerHTML = `<option value="All">All Villages</option>` + opts;
+    document.getElementById("villageSettingsList").innerHTML = villages.map(v => `<div style="background:#eee;padding:5px;margin:2px;">${v}</div>`).join('');
+}
+
+function addVillage() {
+    let v = document.getElementById("newVillage").value;
+    if(v) { villages.push(v); save(); updateVillageUI(); document.getElementById("newVillage").value=""; }
+}
+
+function addCustomer() {
+    let n = document.getElementById("name").value, p = document.getElementById("phone").value, pr = document.getElementById("price").value, a = document.getElementById("areaSelect").value;
+    if(n && p && pr) { customers.push({id:Date.now(), name:n, phone:p, price:Number(pr), area:a}); save(); displayCustomers(); }
+}
+
+function generateBills() {
+    let due = document.getElementById("dueDate").value; if(!due) return alert("Select Due Date!");
+    let month = new Date().toLocaleString('default', {month:'long', year:'numeric'});
+    customers.forEach(c => {
+        let unpaid = invoices.filter(i => i.custId === c.id && !i.paid).reduce((s, i) => s + (i.amount + (i.arrears || 0)), 0);
+        invoices.push({invId:Date.now()+Math.random(), custId:c.id, month, amount:c.price, arrears:unpaid, paid:false, dueDate:due});
+    });
+    save(); displayCustomers(); alert("Bills Generated!");
+}
+
+function markPaid(id) { let i = invoices.findIndex(x => x.invId === id); invoices[i].paid = true; save(); displayCustomers(); }
+
+function displayCustomers() {
+    let nt = document.getElementById("searchName").value.toLowerCase(), vf = document.getElementById("filterVillage").value;
+    let html = "";
+    customers.filter(c => c.name.toLowerCase().includes(nt) && (vf === "All" || c.area === vf)).forEach(c => {
+        let invs = invoices.filter(i => i.custId === c.id), unpaid = invs.filter(i => !i.paid);
+        let totalDue = unpaid.reduce((s, i) => s + (i.amount + (i.arrears || 0)), 0);
+        html += `<div class="card"><strong>${c.name}</strong> <span style="color:red;float:right">Rs. ${totalDue}</span><br><small>${c.area}</small>
+        <div style="margin-top:5px;">${unpaid.map(i => `<button style="background:var(--success);padding:5px;font-size:12px;" onclick="markPaid(${i.invId})">Paid Rs.${i.amount+i.arrears}</button>`).join(' ')}</div></div>`;
+    });
+    document.getElementById("customerList").innerHTML = html;
+}
+
+function addExpense() {
+    let n = document.getElementById("expNote").value, a = document.getElementById("expAmount").value;
+    if(n && a) { expenses.push({note:n, amount:Number(a), date:new Date().toLocaleDateString()}); save(); displayExpenses(); }
+}
+
+function displayExpenses() {
+    document.getElementById("expenseList").innerHTML = expenses.map(e => `<div class="card" style="border-left-color:orange"><strong>${e.note}</strong>: Rs.${e.amount}</div>`).join('');
+}
+
+function updateReport() {
+    let inc = invoices.filter(i => i.paid).reduce((s, i) => s + (i.amount + (i.arrears || 0)), 0), exp = expenses.reduce((s, e) => s + e.amount, 0);
+    document.getElementById("report").innerHTML = `<div><small>Income</small><br><b>Rs. ${inc}</b></div><div><small>Profit</small><br><b>Rs. ${inc-exp}</b></div>`;
+}
+
+function backup() {
+    let b = new Blob([JSON.stringify({customers, invoices, expenses, villages})], {type:"application/json"});
+    let a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "ISP_Backup.json"; a.click();
+}
+
+async function getContact() {
+    if ('contacts' in navigator) {
+        const c = await navigator.contacts.select(['name', 'tel']);
+        if (c.length) { document.getElementById("name").value = c[0].name[0]; document.getElementById("phone").value = c[0].tel[0].replace(/[^0-9]/g, ''); }
+    }
+}
+</script>
+</body>
+</html>
