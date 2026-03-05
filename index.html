@@ -2,178 +2,286 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ISP Manager Pro v11.0</title>
+    <title>ISP Manager Pro v13.0 - Power Edition</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        :root { --primary: #2563eb; --success: #16a34a; --danger: #dc2626; --whatsapp: #25d366; --bg: #f8fafc; }
-        body { font-family: system-ui, sans-serif; padding: 10px; background: var(--bg); max-width: 600px; margin: auto; }
-        input, button, select { padding: 12px; margin: 5px 0; width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 15px; box-sizing: border-box; }
-        button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
-        .card { background: white; padding: 15px; margin-top: 10px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 5px solid var(--primary); }
-        .stats-box { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .stat-card { background: white; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #ddd; cursor: pointer; }
-        .stat-label { font-size: 10px; color: #64748b; font-weight: bold; }
-        .stat-val { font-size: 14px; font-weight: bold; }
-        .main-tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 10px; }
-        .tab-btn { flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 11px; cursor: pointer; background: transparent; color: #444; }
-        .tab-active { background: var(--primary); color: white; }
-        .sub-tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 10px; }
-        .sub-btn { flex: 1; padding: 10px; border: none; background: none; font-weight: bold; color: #888; cursor: pointer; }
-        .sub-active { color: var(--primary); border-bottom: 3px solid var(--primary); }
-        .whatsapp-btn { background: var(--whatsapp) !important; color: white; text-decoration: none; display: block; text-align: center; border-radius: 8px; padding: 8px; margin-top: 5px; font-size: 12px; }
+        :root { --primary: #2563eb; --success: #16a34a; --danger: #dc2626; --whatsapp: #25d366; --bg: #f1f5f9; --card-bg: #ffffff; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 10px; background: var(--bg); max-width: 800px; margin: auto; color: #1e293b; }
+        
+        /* Layout & Tabs */
+        .main-tabs { display: flex; gap: 8px; margin-bottom: 20px; background: #e2e8f0; padding: 6px; border-radius: 12px; position: sticky; top: 10px; z-index: 100; }
+        .tab-btn { flex: 1; padding: 12px 5px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.3s; background: transparent; color: #475569; }
+        .tab-active { background: var(--primary); color: white; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.4); }
+
+        /* Stats Cards */
+        .stats-box { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .stat-card { background: var(--card-bg); padding: 15px; border-radius: 15px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-bottom: 4px solid #cbd5e1; cursor: pointer; }
+        .stat-card.active-border { border-bottom-color: var(--primary); transform: translateY(-2px); }
+        .stat-label { font-size: 11px; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-val { font-size: 18px; font-weight: 800; margin-top: 5px; }
+
+        /* Content Cards */
+        .card { background: var(--card-bg); padding: 18px; margin-top: 15px; border-radius: 15px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-left: 6px solid var(--primary); animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Inputs & Buttons */
+        input, select { padding: 14px; margin: 8px 0; width: 100%; border-radius: 10px; border: 2px solid #e2e8f0; font-size: 15px; outline: none; transition: 0.2s; box-sizing: border-box; }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        button { padding: 14px; margin: 8px 0; width: 100%; border-radius: 10px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        button:active { transform: scale(0.98); }
+        
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-wa { background: var(--whatsapp); color: white; text-decoration: none; display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: 10px; font-weight: 700; font-size: 14px; margin-top: 10px; }
+
+        .sub-tabs { display: flex; gap: 10px; margin: 15px 0; }
+        .sub-btn { flex: 1; padding: 10px; border: none; background: #e2e8f0; border-radius: 8px; font-weight: 700; color: #64748b; cursor: pointer; }
+        .sub-active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+        .badge-unpaid { background: #fee2e2; color: #991b1b; }
+        .badge-paid { background: #dcfce7; color: #166534; }
     </style>
 </head>
 <body>
 
 <div id="app">
     <div class="stats-box">
-        <div class="stat-card" onclick="changeSubView('paid')"><div class="stat-label">TOTAL PAID</div><div id="statPaid" class="stat-val" style="color:var(--success)">Rs. 0</div></div>
-        <div class="stat-card" onclick="changeSubView('unpaid')"><div class="stat-label">TOTAL UNPAID</div><div id="statUnpaid" class="stat-val" style="color:var(--danger)">Rs. 0</div></div>
+        <div class="stat-card" onclick="changeSubView('paid')">
+            <div class="stat-label">Total Received</div>
+            <div id="statPaid" class="stat-val" style="color:var(--success)">Rs. 0</div>
+        </div>
+        <div class="stat-card" onclick="changeSubView('unpaid')">
+            <div class="stat-label">Total Outstanding</div>
+            <div id="statUnpaid" class="stat-val" style="color:var(--danger)">Rs. 0</div>
+        </div>
         <div class="stat-card" style="grid-column: span 2;" onclick="scrollToEdit()">
-            <div class="stat-label">TOTAL SAVED CUSTOMERS</div>
-            <div id="statTotalCust" class="stat-val" style="color:var(--primary); font-size: 20px;">0</div>
+            <div class="stat-label">Active Customers</div>
+            <div id="statTotalCust" class="stat-val" style="color:var(--primary)">0</div>
         </div>
     </div>
 
     <div class="main-tabs">
-        <button class="tab-btn tab-active" onclick="switchMain('billing', event)">Dashboard</button>
-        <button class="tab-btn" onclick="switchMain('addCust', event)">+ Customer</button>
-        <button class="tab-btn" onclick="switchMain('settings', event)">Settings</button>
+        <button class="tab-btn tab-active" onclick="switchMain('billing', event)">DASHBOARD</button>
+        <button class="tab-btn" onclick="switchMain('addCust', event)">CUSTOMERS</button>
+        <button class="tab-btn" onclick="switchMain('settings', event)">SETUP</button>
     </div>
 
     <div id="billingTab">
         <div class="sub-tabs">
-            <button id="btnUnpaid" class="sub-btn sub-active" onclick="changeSubView('unpaid')">UNPAID LIST</button>
-            <button id="btnPaid" class="sub-btn" onclick="changeSubView('paid')">PAID LIST</button>
+            <button id="btnUnpaid" class="sub-btn sub-active" onclick="changeSubView('unpaid')">UNPAID BILLS</button>
+            <button id="btnPaid" class="sub-btn" onclick="changeSubView('paid')">PAID HISTORY</button>
         </div>
-        <input type="text" id="searchName" placeholder="🔍 Search customers..." onkeyup="displayCustomers()">
+        <input type="text" id="searchName" placeholder="🔍 Search by Name, Village or Phone..." onkeyup="displayCustomers()">
         <div id="customerList"></div>
-        <button style="background: #7c3aed; margin-top:20px;" onclick="generateBills()">Generate Monthly Bills</button>
+        
+        <div class="card" style="border-left-color: #7c3aed; background: #f5f3ff;">
+            <h4 style="margin:0 0 10px 0;">📅 Generate Monthly Bills</h4>
+            <p style="font-size: 12px; color: #6d28d9; margin-bottom: 10px;">Duplicate bills nahi banenge aur pichla baqaya khud shamil ho jayega.</p>
+            <button style="background: #7c3aed;" onclick="generateBills()">Create Monthly Invoices</button>
+        </div>
     </div>
 
     <div id="addCustTab" style="display:none">
         <div class="card" style="border-left-color: #6366f1;">
-            <h4>👤 Add New Customer</h4>
-            <input type="text" id="name" placeholder="Name">
+            <h4>👤 Register New User</h4>
+            <button style="background:#6366f1;" onclick="getContact()">📞 Import from Phonebook</button>
+            <input type="text" id="name" placeholder="Full Name">
             <input type="text" id="phone" placeholder="923xxxxxxxxx">
-            <input type="number" id="price" placeholder="Monthly Rate">
+            <input type="number" id="price" placeholder="Monthly Package Price">
+            <label style="font-size:12px; font-weight:bold;">Select Village:</label>
             <select id="areaSelect"></select>
-            <button onclick="addCustomer()">Save Customer</button>
+            <button class="btn-success" onclick="addCustomer()">✅ Save Customer</button>
         </div>
+
         <div id="editSectionAnchor"></div>
-        <h4 style="margin-top:25px;">📋 Manage & Edit Customers</h4>
+        <h3 style="margin: 30px 0 10px 5px;">📋 Registered Database</h3>
         <div id="masterList"></div>
     </div>
 
     <div id="settingsTab" style="display:none">
         <div class="card">
-            <h4>🏘️ Villages</h4>
-            <input type="text" id="newVillage" placeholder="Village Name">
-            <button onclick="addVillage()">Add Village</button>
+            <h4>🏘️ Village Management</h4>
+            <input type="text" id="newVillage" placeholder="Enter New Village Name">
+            <button style="background: #475569;" onclick="addVillage()">+ Add Village</button>
+            <div id="villageListDisplay" style="margin-top:10px; display:flex; gap:5px; flex-wrap:wrap;"></div>
         </div>
-        <button style="background: #475569; margin-top:20px;" onclick="backup()">Download Backup</button>
+        
+        <div class="card" style="border-left-color: #0ea5e9;">
+            <h4>💾 Data Security</h4>
+            <button style="background: #0ea5e9;" onclick="backup()">Download Local Backup</button>
+            <p style="font-size:11px; color:gray;">Apna data mehfooz rakhne ke liye hafte mein ek baar backup download karen.</p>
+        </div>
     </div>
 </div>
 
 <script>
-let customers = JSON.parse(localStorage.getItem("isp_cust")) || [];
-let invoices = JSON.parse(localStorage.getItem("isp_inv")) || [];
-let villages = JSON.parse(localStorage.getItem("isp_vill")) || ["Village 1"];
+// Logic State
+let customers = JSON.parse(localStorage.getItem("isp_v13_cust")) || [];
+let invoices = JSON.parse(localStorage.getItem("isp_v13_inv")) || [];
+let villages = JSON.parse(localStorage.getItem("isp_v13_vill")) || ["Default Village"];
 let currentSubView = 'unpaid';
 
+// Core Save Function
 function save() {
-    localStorage.setItem("isp_cust", JSON.stringify(customers));
-    localStorage.setItem("isp_inv", JSON.stringify(invoices));
-    localStorage.setItem("isp_vill", JSON.stringify(villages));
+    localStorage.setItem("isp_v13_cust", JSON.stringify(customers));
+    localStorage.setItem("isp_v13_inv", JSON.stringify(invoices));
+    localStorage.setItem("isp_v13_vill", JSON.stringify(villages));
     updateReport();
 }
 
-function updateReport() {
-    // Agar customers 0 hain toh sab zero
-    if (customers.length === 0) {
-        invoices = []; 
-        document.getElementById("statPaid").innerText = "Rs. 0";
-        document.getElementById("statUnpaid").innerText = "Rs. 0";
-        document.getElementById("statTotalCust").innerText = "0";
-        return;
-    }
-    let paid = invoices.filter(i => i.paid).reduce((s, i) => s + i.amount, 0);
-    let unpaid = invoices.filter(i => !i.paid).reduce((s, i) => s + i.amount, 0);
-    document.getElementById("statPaid").innerText = "Rs. " + paid;
-    document.getElementById("statUnpaid").innerText = "Rs. " + unpaid;
-    document.getElementById("statTotalCust").innerText = customers.length;
-}
+// Powerfull Feature: Duplicate Protection & Arrears Logic
+function generateBills() {
+    let month = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+    let count = 0;
 
-function changeSubView(view) {
-    currentSubView = view;
-    document.getElementById('btnUnpaid').classList.toggle('sub-active', view === 'unpaid');
-    document.getElementById('btnPaid').classList.toggle('sub-active', view === 'paid');
+    if(customers.length === 0) return alert("Pehle customers add karen!");
+
+    customers.forEach(c => {
+        // 1. Check if already exists
+        let exists = invoices.some(i => i.custId === c.id && i.month === month);
+        
+        if (!exists) {
+            // 2. Powerful: Calculate Arrears (Previous Unpaid)
+            let unpaidInvoices = invoices.filter(i => i.custId === c.id && !i.paid);
+            let arrears = unpaidInvoices.reduce((s, i) => s + i.amount, 0);
+
+            invoices.push({
+                invId: Date.now() + Math.random(),
+                custId: c.id,
+                month: month,
+                amount: c.price,
+                arrears: arrears,
+                paid: false,
+                dateGenerated: new Date().toLocaleDateString()
+            });
+            count++;
+        }
+    });
+
+    save();
     displayCustomers();
+    alert(count > 0 ? `${count} naye bills generate ho gaye!` : "Is mahine ke bills pehle hi mojud hain.");
 }
 
+// Phonebook Integration (Restored & Enhanced)
+async function getContact() {
+    if (!('contacts' in navigator && 'select' in navigator.contacts)) {
+        return alert("Browser support nahi karta. Chrome use karen.");
+    }
+    try {
+        const props = ['name', 'tel'];
+        const opts = {multiple: false};
+        const contact = await navigator.contacts.select(props, opts);
+        if (contact.length) {
+            document.getElementById("name").value = contact[0].name[0];
+            let num = contact[0].tel[0].replace(/[^0-9]/g, '');
+            if(num.startsWith('03')) num = '92' + num.substring(1);
+            document.getElementById("phone").value = '+' + num;
+        }
+    } catch (e) { console.log(e); }
+}
+
+// Powerfull Search: Name, Phone, Village
 function displayCustomers() {
-    let search = document.getElementById("searchName").value.toLowerCase();
+    let query = document.getElementById("searchName").value.toLowerCase();
     let html = "";
-    
-    customers.filter(c => c.name.toLowerCase().includes(search)).forEach(c => {
+
+    let filtered = customers.filter(c => 
+        c.name.toLowerCase().includes(query) || 
+        c.phone.includes(query) || 
+        c.village.toLowerCase().includes(query)
+    );
+
+    filtered.forEach(c => {
         let list = invoices.filter(i => i.custId === c.id && i.paid === (currentSubView === 'paid'));
+        
         if (list.length > 0) {
-            let total = list.reduce((s, i) => s + i.amount, 0);
+            let billAmount = list.reduce((s, i) => s + i.amount, 0);
+            let arrearsAmount = list.reduce((s, i) => s + (i.arrears || 0), 0);
+            let total = billAmount + arrearsAmount;
+
             html += `<div class="card" style="border-left-color:${currentSubView==='paid'?'#16a34a':'#2563eb'}">
-                <strong>${c.name}</strong> <span style="float:right">Rs. ${total}</span><br>
-                <small>📍 ${c.village} | 📞 ${c.phone}</small>
-                ${currentSubView === 'unpaid' ? 
-                    `<a class="whatsapp-btn" href="https://wa.me/${c.phone.replace('+','')}">WhatsApp Bill</a>
-                     <button onclick="markPaid(${c.id})" style="margin-top:5px; background:var(--success); padding:5px; font-size:12px;">Mark as Paid</button>` : 
-                    `<div style="color:green; font-size:11px; margin-top:5px;">✔ Payment Received</div>`}
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <span class="badge ${currentSubView==='unpaid'?'badge-unpaid':'badge-paid'}">${currentSubView.toUpperCase()}</span>
+                        <h3 style="margin:5px 0 0 0;">${c.name}</h3>
+                        <small style="color:gray">📍 ${c.village} | 📞 ${c.phone}</small>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:20px; font-weight:800;">Rs. ${total}</div>
+                        ${arrearsAmount > 0 ? `<small style="color:red">Incl. Arrears: ${arrearsAmount}</small>` : ''}
+                    </div>
+                </div>
+                
+                ${currentSubView === 'unpaid' ? `
+                    <a class="btn-wa" target="_blank" href="https://wa.me/${c.phone.replace('+','')}/?text=Assalam-o-Alaikum ${c.name}, aapka internet bill Rs.${total} banta hai. Shukriya.">
+                        💬 Send WhatsApp Bill
+                    </a>
+                    <button class="btn-success" onclick="markPaid(${c.id})">💰 Receive Payment</button>
+                ` : `
+                    <div style="margin-top:10px; padding:8px; background:#f0fdf4; border-radius:8px; font-size:12px; color:#166534; font-weight:bold;">
+                        ✅ Received on: ${list[list.length-1].paidDate || 'N/A'}
+                    </div>
+                `}
             </div>`;
         }
     });
-    document.getElementById("customerList").innerHTML = html || `<p style="text-align:center; padding:20px; color:gray;">Koi ${currentSubView} record nahi mila.</p>`;
+
+    document.getElementById("customerList").innerHTML = html || "<p style='text-align:center; padding:40px; color:gray;'>Koi records nahi mile.</p>";
 }
 
 function markPaid(custId) {
-    invoices.filter(i => i.custId === custId && !i.paid).forEach(i => i.paid = true);
-    save(); displayCustomers();
+    if(confirm("Full payment receive kar li gayi hai?")) {
+        invoices.filter(i => i.custId === custId && !i.paid).forEach(i => {
+            i.paid = true;
+            i.paidDate = new Date().toLocaleString();
+        });
+        save();
+        displayCustomers();
+    }
 }
 
+// Master List with Edit/Delete
+function displayMasterList() {
+    document.getElementById("masterList").innerHTML = customers.map(c => `
+        <div class="card" style="border-left-color:#6366f1; background:#f8fafc;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+                <input type="text" value="${c.name}" onchange="updateCust(${c.id},'name',this.value)" placeholder="Name">
+                <input type="text" value="${c.phone}" onchange="updateCust(${c.id},'phone',this.value)" placeholder="Phone">
+                <input type="number" value="${c.price}" onchange="updateCust(${c.id},'price',this.value)" placeholder="Price">
+                <select onchange="updateCust(${c.id},'village',this.value)">
+                    ${villages.map(v => `<option value="${v}" ${c.village===v?'selected':''}>${v}</option>`).join('')}
+                </select>
+            </div>
+            <button class="btn-danger" style="padding:8px; font-size:12px; margin-top:10px;" onclick="deleteCustomer(${c.id})">🗑️ Delete Customer</button>
+        </div>
+    `).join('');
+}
+
+// Helper Functions
 function addCustomer() {
     let n = document.getElementById("name").value, p = document.getElementById("phone").value, 
         pr = document.getElementById("price").value, v = document.getElementById("areaSelect").value;
-    if(n && pr) {
-        if(p && !p.startsWith('+')) p = '+92' + p.replace(/^0/, '');
-        customers.push({id:Date.now(), name:n, phone:p, price:Number(pr), village:v});
-        save(); document.getElementById("name").value=""; document.getElementById("phone").value="";
-        displayMasterList(); alert("Saved!");
-    }
-}
-
-function displayMasterList() {
-    document.getElementById("masterList").innerHTML = customers.map(c => `
-        <div class="card" style="border-left-color:#6366f1">
-            <input style="font-weight:bold" value="${c.name}" onchange="updateCust(${c.id},'name',this.value)">
-            <input value="${c.phone}" onchange="updateCust(${c.id},'phone',this.value)">
-            <input type="number" value="${c.price}" onchange="updateCust(${c.id},'price',this.value)">
-            <button onclick="deleteCustomer(${c.id})" style="background:var(--danger); font-size:11px; width:auto;">Delete</button>
-        </div>`).join('');
+    if(!n || !pr) return alert("Naam aur Price lazmi hai!");
+    
+    if(p && !p.startsWith('+')) p = '+92' + p.replace(/^0/, '');
+    
+    customers.push({id:Date.now(), name:n, phone:p, price:Number(pr), village:v});
+    save();
+    alert("Customer saved successfully!");
+    ['name','phone','price'].forEach(id => document.getElementById(id).value="");
+    displayMasterList();
 }
 
 function deleteCustomer(id) {
-    if(confirm("Customer aur uska sara record khatam kar dein?")) {
+    if(confirm("Customer delete karne se uske sab unpaid bills bhi khatam ho jayenge. Continue?")) {
         customers = customers.filter(c => c.id !== id);
         invoices = invoices.filter(i => i.custId !== id);
-        save(); displayMasterList(); displayCustomers();
+        save();
+        displayMasterList();
+        displayCustomers();
     }
-}
-
-function generateBills() {
-    let month = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-    customers.forEach(c => {
-        if (!invoices.some(i => i.custId === c.id && i.month === month)) {
-            invoices.push({invId: Date.now()+Math.random(), custId: c.id, month: month, amount: c.price, paid: false});
-        }
-    });
-    save(); displayCustomers(); alert("Bills Updated!");
 }
 
 function updateCust(id, f, v) { 
@@ -182,27 +290,53 @@ function updateCust(id, f, v) {
     save(); 
 }
 
+function updateReport() {
+    let p = invoices.filter(i => i.paid).reduce((s, i) => s + i.amount + (i.arrears || 0), 0);
+    let u = invoices.filter(i => !i.paid).reduce((s, i) => s + i.amount + (i.arrears || 0), 0);
+    document.getElementById("statPaid").innerText = "Rs. " + p;
+    document.getElementById("statUnpaid").innerText = "Rs. " + u;
+    document.getElementById("statTotalCust").innerText = customers.length;
+}
+
 function switchMain(t, e) {
     ['billingTab','addCustTab','settingsTab'].forEach(id => document.getElementById(id).style.display='none');
     document.getElementById(t+'Tab').style.display='block';
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
-    e.target.classList.add('tab-active');
+    if(e && e.target) e.target.classList.add('tab-active');
     if(t==='addCust') displayMasterList();
+}
+
+function changeSubView(v) {
+    currentSubView = v;
+    document.getElementById('btnUnpaid').classList.toggle('sub-active', v === 'unpaid');
+    document.getElementById('btnPaid').classList.toggle('sub-active', v === 'paid');
+    displayCustomers();
 }
 
 function addVillage() {
     let v = document.getElementById("newVillage").value;
-    if(v) { villages.push(v); document.getElementById("newVillage").value = ""; save(); updateVillageUI(); }
+    if(v) { villages.push(v); document.getElementById("newVillage").value=""; save(); updateVillageUI(); }
 }
 
 function updateVillageUI() {
     document.getElementById("areaSelect").innerHTML = villages.map(v => `<option value="${v}">${v}</option>`).join('');
+    document.getElementById("villageListDisplay").innerHTML = villages.map(v => `<span class="badge badge-paid" style="background:#e2e8f0; color:#475569;">${v}</span>`).join('');
 }
 
-function scrollToEdit() { switchMain('addCust', {target: document.querySelector('button[onclick*="addCust"]')}); }
-function backup() { let b = new Blob([JSON.stringify({customers, invoices, villages})], {type:"application/json"}); let a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "Backup.json"; a.click(); }
+function scrollToEdit() { switchMain('addCust', {target: document.querySelector('.tab-btn:nth-child(2)')}); }
+function backup() { 
+    let data = {customers, invoices, villages};
+    let blob = new Blob([JSON.stringify(data)], {type:"application/json"});
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `ISP_Backup_${new Date().toLocaleDateString()}.json`;
+    a.click();
+}
 
-updateVillageUI(); updateReport(); displayCustomers();
+// Init
+updateVillageUI();
+updateReport();
+displayCustomers();
 </script>
 </body>
 </html>
