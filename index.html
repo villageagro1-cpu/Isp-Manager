@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ISP Manager Pro v9.0</title>
+    <title>ISP Manager Pro v10.0</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         :root { --primary: #2563eb; --success: #16a34a; --danger: #dc2626; --whatsapp: #25d366; --bg: #f8fafc; }
@@ -11,8 +11,7 @@
         button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
         .card { background: white; padding: 15px; margin-top: 10px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 5px solid var(--primary); }
         .stats-box { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .stat-card { background: white; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #ddd; cursor: pointer; transition: 0.2s; }
-        .stat-card:active { transform: scale(0.95); background: #f1f5f9; }
+        .stat-card { background: white; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #ddd; cursor: pointer; }
         .stat-label { font-size: 10px; color: #64748b; font-weight: bold; }
         .stat-val { font-size: 14px; font-weight: bold; }
         .main-tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 10px; }
@@ -26,9 +25,9 @@
 
 <div id="app">
     <div class="stats-box">
-        <div class="stat-card" onclick="switchMain('billing', event)"><div class="stat-label">TOTAL PAID</div><div id="statPaid" class="stat-val" style="color:var(--success)">Rs. 0</div></div>
-        <div class="stat-card" onclick="switchMain('billing', event)"><div class="stat-label">TOTAL UNPAID</div><div id="statUnpaid" class="stat-val" style="color:var(--danger)">Rs. 0</div></div>
-        <div class="stat-card" style="grid-column: span 2; border-bottom: 3px solid var(--primary);" onclick="scrollToEdit()">
+        <div class="stat-card"><div class="stat-label">TOTAL PAID</div><div id="statPaid" class="stat-val" style="color:var(--success)">Rs. 0</div></div>
+        <div class="stat-card"><div class="stat-label">TOTAL UNPAID</div><div id="statUnpaid" class="stat-val" style="color:var(--danger)">Rs. 0</div></div>
+        <div class="stat-card" style="grid-column: span 2;" onclick="scrollToEdit()">
             <div class="stat-label">TOTAL SAVED CUSTOMERS (Click to Edit)</div>
             <div id="statTotalCust" class="stat-val" style="color:var(--primary); font-size: 20px;">0</div>
         </div>
@@ -38,32 +37,26 @@
         <button class="tab-btn tab-active" onclick="switchMain('billing', event)">Dashboard</button>
         <button class="tab-btn" onclick="switchMain('expenses', event)">Expenses</button>
         <button class="tab-btn" onclick="switchMain('addCust', event)">+ Customer</button>
-        <button class="tab-btn" onclick="switchMain('settings', event)">Settings</button>
+    </div>
+
+    <div id="billingTab">
+        <input type="text" id="searchName" placeholder="🔍 Search customers..." onkeyup="displayCustomers()">
+        <div id="customerList"></div>
+        <button style="background: #7c3aed; margin-top:20px;" onclick="generateBills()">Generate Monthly Bills</button>
     </div>
 
     <div id="addCustTab" style="display:none">
         <div class="card" style="border-left-color: #6366f1;">
             <h4>👤 Add New Customer</h4>
-            <button style="background:#6366f1; font-size:12px; margin-bottom:10px;" onclick="getContact()">📞 Import from Phonebook</button>
+            <button style="background:#6366f1; font-size:12px;" onclick="getContact()">📞 Import from Phonebook</button>
             <input type="text" id="name" placeholder="Name">
             <input type="text" id="phone" placeholder="923xxxxxxxxx">
             <input type="number" id="price" placeholder="Monthly Rate">
-            <div style="display: flex; gap: 5px;">
-                <select id="areaSelect" style="flex: 2;"></select>
-                <button onclick="promptVillage()" style="flex: 1; font-size: 11px; background: #475569;">+ Village</button>
-            </div>
-            <button onclick="addCustomer()" style="margin-top:10px;">Save Customer</button>
+            <button onclick="addCustomer()">Save Customer</button>
         </div>
-
-        <div id="editSectionAnchor"></div> <h4 style="margin-top:25px; padding-left: 5px; border-left: 4px solid var(--primary);">📋 Edit/Manage Customers</h4>
-        <input type="text" id="searchMaster" placeholder="🔍 Search to edit..." onkeyup="displayMasterList()">
+        <div id="editSectionAnchor"></div>
+        <h4 style="margin-top:25px;">📋 Manage Customers</h4>
         <div id="masterList"></div>
-    </div>
-
-    <div id="billingTab">
-        <input type="text" id="searchName" placeholder="🔍 Search for bills..." onkeyup="displayCustomers()">
-        <div id="customerList"></div>
-        <button style="background: #7c3aed; margin-top:20px;" onclick="generateBills()">Generate Monthly Bills</button>
     </div>
 
     <div id="expensesTab" style="display:none">
@@ -74,72 +67,118 @@
         </div>
         <div id="expenseList"></div>
     </div>
-
-    <div id="settingsTab" style="display:none">
-        <div class="card" style="text-align: center;">
-            <h3>Ihsan Ibrahim</h3>
-            <p>0300-8860865</p>
-            <button style="background: #475569" onclick="backup()">Download Backup</button>
-        </div>
-    </div>
 </div>
 
 <script>
 let customers = JSON.parse(localStorage.getItem("isp_cust")) || [];
 let invoices = JSON.parse(localStorage.getItem("isp_inv")) || [];
 let expenses = JSON.parse(localStorage.getItem("isp_exp")) || [];
-let villages = JSON.parse(localStorage.getItem("isp_vill")) || ["Village 1"];
 
 function save() {
     localStorage.setItem("isp_cust", JSON.stringify(customers));
     localStorage.setItem("isp_inv", JSON.stringify(invoices));
     localStorage.setItem("isp_exp", JSON.stringify(expenses));
-    localStorage.setItem("isp_vill", JSON.stringify(villages));
     updateReport();
 }
 
-// Naya Feature: Click karne par list par le jaye
-function scrollToEdit() {
-    switchMain('addCust', {target: document.querySelector('button[onclick*="addCust"]')});
-    setTimeout(() => {
-        document.getElementById('editSectionAnchor').scrollIntoView({behavior: 'smooth'});
-    }, 100);
+// FIX 1: Duplicate Bill Protection logic
+function generateBills() {
+    let month = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+    let addedCount = 0;
+
+    customers.forEach(c => {
+        // Check if bill for this month already exists for this customer
+        let alreadyExists = invoices.some(i => i.custId === c.id && i.month === month);
+        
+        if (!alreadyExists) {
+            let prevArrears = invoices.filter(i => i.custId === c.id && !i.paid)
+                                      .reduce((s, i) => s + i.amount, 0);
+            
+            invoices.push({
+                invId: Date.now() + Math.random(),
+                custId: c.id,
+                month: month,
+                amount: c.price,
+                paid: false
+            });
+            addedCount++;
+        }
+    });
+
+    save();
+    displayCustomers();
+    alert(addedCount > 0 ? `${addedCount} naye bills generate ho gaye!` : "Is mahine ke bills pehle hi mojud hain.");
+}
+
+// FIX 2: Delete Customer with balance sync
+function deleteCustomer(id) {
+    if(confirm("Customer delete karne se uske tamam unpaid bills bhi khatam ho jayenge. Continue?")) {
+        customers = customers.filter(c => c.id !== id);
+        invoices = invoices.filter(i => i.custId !== id); // Remove associated bills
+        save();
+        displayMasterList();
+        displayCustomers();
+    }
+}
+
+function displayCustomers() {
+    let search = document.getElementById("searchName").value.toLowerCase();
+    let html = "";
+    customers.filter(c => c.name.toLowerCase().includes(search)).forEach(c => {
+        let invs = invoices.filter(i => i.custId === c.id && !i.paid);
+        if(invs.length > 0) {
+            let total = invs.reduce((s, i) => s + i.amount, 0);
+            html += `<div class="card">
+                <strong>${c.name}</strong> <span style="float:right; color:red">Rs. ${total}</span><br>
+                <small>${c.phone}</small>
+                <a class="whatsapp-btn" href="https://wa.me/${c.phone.replace('+','')}/?text=Salam ${c.name}, aapka bill Rs.${total} banta hai.">WhatsApp Bill</a>
+                <button onclick="markPaid(${c.id})" style="margin-top:5px; background:var(--success)">Receive Payment</button>
+            </div>`;
+        }
+    });
+    document.getElementById("customerList").innerHTML = html || "<p style='text-align:center'>Sab payments clear hain!</p>";
+}
+
+function markPaid(custId) {
+    invoices.filter(i => i.custId === custId && !i.paid).forEach(i => {
+        i.paid = true;
+        i.paidDate = new Date().toLocaleDateString();
+    });
+    save();
+    displayCustomers();
+}
+
+function updateReport() {
+    let paid = invoices.filter(i => i.paid).reduce((s, i) => s + i.amount, 0);
+    let unpaid = invoices.filter(i => !i.paid).reduce((s, i) => s + i.amount, 0);
+    document.getElementById("statPaid").innerText = "Rs. " + paid;
+    document.getElementById("statUnpaid").innerText = "Rs. " + unpaid;
+    document.getElementById("statTotalCust").innerText = customers.length;
 }
 
 function displayMasterList() {
-    let search = document.getElementById("searchMaster").value.toLowerCase();
-    let filtered = customers.filter(c => c.name.toLowerCase().includes(search));
-    let html = "";
-    filtered.forEach(c => {
-        html += `<div class="card" style="border-left-color:#6366f1; background:#fff;">
-            <label style="font-size:10px; color:gray;">Name:</label>
-            <input class="edit-input" type="text" value="${c.name}" onchange="updateCustomer(${c.id}, 'name', this.value)">
-            <label style="font-size:10px; color:gray;">Phone:</label>
-            <input class="edit-input" type="text" value="${c.phone}" onchange="updateCustomer(${c.id}, 'phone', this.value)">
-            <label style="font-size:10px; color:gray;">Rate:</label>
-            <input class="edit-input" type="number" value="${c.price}" onchange="updateCustomer(${c.id}, 'price', this.value)">
-            <button onclick="deleteCustomer(${c.id})" style="background:var(--danger); padding:5px; font-size:11px; margin-top:5px; width:auto;">Delete User</button>
-        </div>`;
-    });
-    document.getElementById("masterList").innerHTML = html || "<p style='text-align:center; padding:20px;'>No customers found.</p>";
+    document.getElementById("masterList").innerHTML = customers.map(c => `
+        <div class="card" style="border-left-color:#6366f1">
+            <input class="edit-input" type="text" value="${c.name}" onchange="updateCust(${c.id},'name',this.value)">
+            <input class="edit-input" type="text" value="${c.phone}" onchange="updateCust(${c.id},'phone',this.value)">
+            <input class="edit-input" type="number" value="${c.price}" onchange="updateCust(${c.id},'price',this.value)">
+            <button onclick="deleteCustomer(${c.id})" style="background:var(--danger); width:auto; font-size:11px;">Delete</button>
+        </div>`).join('');
 }
 
-function updateCustomer(id, field, value) {
-    let idx = customers.findIndex(c => c.id === id);
-    if(field === 'price') value = Number(value);
-    customers[idx][field] = value;
-    save();
+function updateCust(id, f, v) { 
+    let idx = customers.findIndex(c => c.id === id); 
+    customers[idx][f] = (f==='price') ? Number(v) : v; 
+    save(); 
 }
 
 function addCustomer() {
     let n = document.getElementById("name").value, p = document.getElementById("phone").value, pr = document.getElementById("price").value;
-    if(p && !p.startsWith('+')) p = '+' + p;
     if(n && pr) {
-        customers.push({id:Date.now(), name:n, phone:p, price:Number(pr), area: document.getElementById("areaSelect").value});
-        save();
-        document.getElementById("name").value=""; document.getElementById("phone").value="";
-        displayMasterList();
-        alert("Customer Added!");
+        if(p && !p.startsWith('+')) p = '+92' + p.replace(/^0/, '');
+        customers.push({id:Date.now(), name:n, phone:p, price:Number(pr)});
+        save(); document.getElementById("name").value=""; document.getElementById("phone").value="";
+        displayMasterList(); alert("Added!");
     }
 }
 
@@ -148,68 +187,22 @@ async function getContact() {
         const contact = await navigator.contacts.select(['name', 'tel']);
         if (contact.length) {
             document.getElementById("name").value = contact[0].name[0];
-            let num = contact[0].tel[0].replace(/[^0-9]/g, '');
-            document.getElementById("phone").value = num.startsWith('92') ? '+' + num : '+92' + num;
+            document.getElementById("phone").value = contact[0].tel[0].replace(/[^0-9]/g, '');
         }
-    } catch (e) { alert("Permission Denied!"); }
+    } catch (e) { alert("Permission Denied"); }
 }
 
-function addExpense() {
-    let n = document.getElementById("expNote").value, a = document.getElementById("expAmount").value;
-    if(n && a) {
-        expenses.push({note:n, amount:Number(a), date:new Date().toLocaleDateString()});
-        save(); document.getElementById("expNote").value=""; document.getElementById("expAmount").value="";
-        displayExpenses();
-    }
-}
-
-function displayExpenses() {
-    document.getElementById("expenseList").innerHTML = expenses.slice().reverse().map((e, i) => `
-        <div class="card" style="border-left-color:orange">
-            <b>${e.note}</b>: Rs. ${e.amount} <small style="float:right">${e.date}</small>
-        </div>`).join('');
-}
-
-function switchMain(tab, e) {
-    ['billingTab', 'expensesTab', 'addCustTab', 'settingsTab'].forEach(id => document.getElementById(id).style.display = 'none');
-    document.getElementById(tab + 'Tab').style.display = 'block';
+function switchMain(t, e) {
+    ['billingTab','expensesTab','addCustTab'].forEach(id => document.getElementById(id).style.display='none');
+    document.getElementById(t+'Tab').style.display='block';
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
-    if(e && e.target) e.target.classList.add('tab-active');
-    if(tab === 'addCust') displayMasterList();
-    if(tab === 'expenses') displayExpenses();
+    e.target.classList.add('tab-active');
+    if(t==='addCust') displayMasterList();
 }
 
-function updateReport() {
-    let paid = invoices.filter(i => i.paid).reduce((s, i) => s + (i.amount + (i.arrears || 0)), 0);
-    let unpaid = invoices.filter(i => !i.paid).reduce((s, i) => s + (i.amount + (i.arrears || 0)), 0);
-    document.getElementById("statPaid").innerText = "Rs. " + paid;
-    document.getElementById("statUnpaid").innerText = "Rs. " + unpaid;
-    document.getElementById("statTotalCust").innerText = customers.length;
-}
+function scrollToEdit() { switchMain('addCust', {target: document.querySelector('button[onclick*="addCust"]')}); }
 
-function displayCustomers() {
-    let search = document.getElementById("searchName").value.toLowerCase();
-    document.getElementById("customerList").innerHTML = customers.filter(c => c.name.toLowerCase().includes(search)).map(c => `
-        <div class="card">
-            <strong>${c.name}</strong><br><small>${c.phone}</small>
-            <a class="whatsapp-btn" href="https://wa.me/${c.phone.replace('+','')}">WhatsApp</a>
-        </div>`).join('');
-}
-
-function generateBills() {
-    customers.forEach(c => {
-        let prev = invoices.filter(i => i.custId === c.id && !i.paid).reduce((s, i) => s + (i.amount + (i.arrears || 0)), 0);
-        invoices.push({invId:Date.now()+Math.random(), custId:c.id, amount:c.price, arrears:prev, paid:false});
-    });
-    save(); alert("Bills Generated!");
-}
-
-function deleteCustomer(id) { if(confirm("Delete Customer?")) { customers = customers.filter(c => c.id !== id); save(); displayMasterList(); } }
-function promptVillage() { let v = prompt("Village:"); if(v) { villages.push(v); save(); updateVillageUI(); } }
-function updateVillageUI() { document.getElementById("areaSelect").innerHTML = villages.map(v => `<option value="${v}">${v}</option>`).join(''); }
-function backup() { let b = new Blob([JSON.stringify({customers, invoices, expenses, villages})], {type:"application/json"}); let a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "ISP_Backup.json"; a.click(); }
-
-updateVillageUI(); updateReport(); displayCustomers();
+updateReport(); displayCustomers();
 </script>
 </body>
 </html>
