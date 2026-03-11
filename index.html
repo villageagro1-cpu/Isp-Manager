@@ -1,254 +1,334 @@
+<?php
+session_start();
+
+// 1. DATABASE CONNECTION
+$servername = "sql311.infinityfree.com"; 
+$username = "if0_41349365"; 
+$password = "ashar8860"; 
+$dbname = "if0_41349365_db_isp"; 
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) { die("Connection failed: " . $conn->connect_error); }
+
+$current_month = date("M Y");
+$vs = ['Markal', 'Tulsipur', 'Rangor', 'Tandhial', 'Kartal', 'Sojan', 'Gandhial', 'Sapwal', 'Nakhnal'];
+
+// --- A. SAVE CUSTOMER ---
+if (isset($_POST['save_customer'])) {
+    $name = $conn->real_escape_string($_POST['name']);
+    $phone = $conn->real_escape_string($_POST['phone']);
+    $area = $conn->real_escape_string($_POST['area']);
+    $bill = $_POST['bill'];
+    $conn->query("INSERT INTO customers (name, phone, area, bill_amount, balance) VALUES ('$name', '$phone', '$area', '$bill', '$bill')");
+    header("Location: index.php"); exit();
+}
+
+// --- B. UPDATE CUSTOMER (EDIT) ---
+if (isset($_POST['update_customer'])) {
+    $id = $_POST['edit_id'];
+    $name = $conn->real_escape_string($_POST['name']);
+    $phone = $conn->real_escape_string($_POST['phone']);
+    $area = $conn->real_escape_string($_POST['area']);
+    $bill = $_POST['bill'];
+    $balance = $_POST['balance'];
+    $conn->query("UPDATE customers SET name='$name', phone='$phone', area='$area', bill_amount='$bill', balance='$balance' WHERE id=$id");
+    header("Location: index.php?page=total_cust"); exit();
+}
+
+// --- C. EXTRA CHARGES (TAFSEEL) ---
+if (isset($_POST['add_extra'])) {
+    $id = $_POST['cid'];
+    $amt = $_POST['extra_amount'];
+    $reason = $conn->real_escape_string($_POST['reason']);
+    $time_now = date("d-M Y h:i A");
+    $conn->query("UPDATE customers SET balance = balance + $amt WHERE id = $id");
+    $conn->query("INSERT INTO payments (cust_id, amount, billing_month, staff_name) VALUES ($id, 0, '$reason', 'Extra: Rs $amt ($time_now)')");
+    header("Location: index.php?page=pay_history"); exit();
+}
+
+// --- D. RECEIVE PAYMENT ---
+if (isset($_POST['pay_bill'])) {
+    $id = $_POST['cid'];
+    $amt = $_POST['amt'];
+    $pay_date = date("d-M-Y h:i A");
+    $conn->query("UPDATE customers SET balance = balance - $amt WHERE id = $id");
+    $conn->query("INSERT INTO payments (cust_id, amount, billing_month, staff_name) VALUES ($id, $amt, '$current_month', '$pay_date')");
+    header("Location: index.php?page=pay_history"); exit();
+}
+
+// --- E. DELETE CUSTOMER ---
+if (isset($_GET['delete_id'])) {
+    $id = $_GET['delete_id'];
+    $conn->query("DELETE FROM customers WHERE id = $id");
+    header("Location: index.php"); exit();
+}
+
+// Dashboard Stats
+$t_u = $conn->query("SELECT COUNT(*) FROM customers")->fetch_row()[0]; 
+$t_b = $conn->query("SELECT SUM(balance) FROM customers")->fetch_row()[0];
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ISP Manager Pro | Billing & Operations</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISP Manager Pro</title>
+    <link rel="manifest" href="manifest.json">
     <style>
-        :root { 
-            --primary: #2563eb; --primary-dark: #1e40af;
-            --success: #10b981; --danger: #ef4444; 
-            --warning: #f59e0b; --whatsapp: #25d366;
-            --bg: #f8fafc; --card-bg: #ffffff;
-            --text-main: #0f172a; --text-muted: #64748b;
-        }
-
-        * { box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg); color: var(--text-main); margin: 0; padding-bottom: 80px; }
-        .container { max-width: 600px; margin: auto; padding: 15px; }
-
-        /* Header Stats */
-        .dashboard-header { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
-        .stat-item { padding: 12px; border-radius: 12px; background: var(--bg); border: 1px solid #e2e8f0; }
-        .stat-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-        .stat-value { font-size: 18px; font-weight: 800; margin-top: 4px; }
-
-        /* Navigation */
-        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 12px; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 1000; }
-        .nav-item { border: none; background: none; color: var(--text-muted); font-size: 11px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
-        .nav-item.active { color: var(--primary); }
-        .nav-icon { font-size: 20px; }
-
-        /* Search & Filters */
-        .search-container { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 90; }
-        .search-input { width: 100%; padding: 14px 18px; border-radius: 14px; border: 1px solid #e2e8f0; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-
-        /* Cards */
-        .card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid #e2e8f0; transition: 0.2s; }
-        .card:active { transform: scale(0.98); }
-        .flex-between { display: flex; justify-content: space-between; align-items: center; }
-        
-        /* Action Buttons */
-        .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-weight: 700; font-size: 14px; cursor: pointer; transition: 0.2s; margin-top: 8px; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-wa { background: var(--whatsapp); color: white; text-decoration: none; display: flex; justify-content: center; align-items: center; }
-        .btn-ghost { background: #f1f5f9; color: var(--text-muted); }
-
-        /* Badges */
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-        .badge-unpaid { background: #fee2e2; color: #b91c1c; }
-        .badge-paid { background: #dcfce7; color: #15803d; }
-        
-        .hidden { display: none; }
+        body { margin:0; font-family:sans-serif; background:#f4f7f6; }
+        .navbar { background:#2c3e50; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100;}
+        .sidebar { height:100%; width:0; position:fixed; z-index:1001; top:0; left:0; background-color:#34495e; overflow-x:hidden; transition:0.3s; padding-top:60px; }
+        .sidebar a { padding:15px 25px; text-decoration:none; font-size:16px; color:#bdc3c7; display:block; cursor:pointer; border-bottom:1px solid #2c3e50; }
+        .content { padding:15px; }
+        .card { background:white; padding:15px; border-radius:10px; margin-bottom:15px; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+        .btn { background:#27ae60; color:white; border:none; padding:12px; border-radius:5px; width:100%; cursor:pointer; font-weight:bold; }
+        input, select { width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:5px; box-sizing:border-box; }
+        table { width:100%; border-collapse:collapse; background:white; font-size:14px; }
+        th, td { text-align:left; padding:10px; border-bottom:1px solid #eee; }
+        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; }
+        .whatsapp-btn { background:#25D366; color:white; padding:5px 8px; text-decoration:none; border-radius:5px; font-size:12px; display:inline-block; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="dashboard-header">
-        <div class="flex-between">
-            <h2 style="margin:0; font-size: 20px;">Financial Summary</h2>
-            <span id="currentDate" style="font-size: 12px; color: var(--text-muted);"></span>
+<div id="mySidebar" class="sidebar">
+    <a onclick="closeNav()" style="font-size:30px; text-align:right; color:white;">&times; Close</a>
+    <a onclick="showPage('dash')">🏠 Dashboard</a>
+    <a onclick="showPage('add_cust')">➕ Add Customer</a>
+    <a onclick="showPage('unpaid_list')">❌ Unpaid List</a>
+    <a onclick="showPage('total_cust')">👥 Total Customers</a>
+    <a onclick="showPage('pay_history')">📜 Payment History</a>
+</div>
+
+<div class="navbar">
+    <span style="font-size:24px;cursor:pointer" onclick="openNav()">&#9776; MENU</span>
+    <b>ISP PRO</b>
+    <span id="online_status" style="color:#2ecc71;">● Online</span>
+</div>
+
+<div class="content">
+    <div id="dash" class="page">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="card">Users<h2><?php echo $t_u; ?></h2></div>
+            <div class="card">Arrears<h2 style="color:red;">Rs <?php echo number_format($t_b); ?></h2></div>
         </div>
-        <div class="stats-grid">
-            <div class="stat-item">
-                <div class="stat-label">Collected</div>
-                <div id="statPaid" class="stat-value" style="color: var(--success)">Rs. 0</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">Receivable</div>
-                <div id="statUnpaid" class="stat-value" style="color: var(--danger)">Rs. 0</div>
-            </div>
+        <div class="card">
+            <h3>Search Customers</h3>
+            <input type="text" id="custSearch" placeholder="🔍 Type name or area..." onkeyup="filterTable()">
         </div>
     </div>
 
-    <main id="mainContent">
-        <section id="view-billing">
-            <div class="search-container">
-                <input type="text" id="searchName" class="search-input" placeholder="Search customer, area, or phone..." onkeyup="renderBilling()">
-            </div>
-            <div id="billingList"></div>
-            
-            <div class="card" style="background: linear-gradient(to right, #6366f1, #2563eb); color: white; border: none;">
-                <h4 style="margin: 0 0 8px 0;">Billing Cycle</h4>
-                <p style="font-size: 12px; opacity: 0.9;">Generate invoices for the current month and auto-calculate arrears.</p>
-                <button onclick="generateMonthlyInvoices()" class="btn" style="background: white; color: var(--primary);">Generate All Bills</button>
-            </div>
-        </section>
+    <div id="add_cust" class="page" style="display:none;">
+        <div class="card">
+            <h3>Register New User</h3>
+            <form method="POST" onsubmit="return !offlineAddCust(this.name.value, this.phone.value, this.area.value, this.bill.value)">
+                <input name="name" placeholder="Full Name" required>
+                <input name="phone" placeholder="92300..." required>
+                <select name="area" required>
+                    <?php foreach($vs as $v) { echo "<option value='$v'>$v</option>"; } ?>
+                </select>
+                <input type="number" name="bill" placeholder="Monthly Bill (Rs)" required>
+                <button name="save_customer" class="btn">Save Customer</button>
+            </form>
+        </div>
+    </div>
 
-        <section id="view-customers" class="hidden">
-            <h3 style="padding: 10px 0;">Customer Database</h3>
-            <button onclick="showAddModal()" class="btn btn-primary" style="margin-bottom: 15px;">+ Register New User</button>
-            <div id="masterCustomerList"></div>
-        </section>
+    <div id="unpaid_list" class="page" style="display:none;">
+        <h3>❌ Pending Payments</h3>
+        <?php
+        $res = $conn->query("SELECT * FROM customers WHERE balance > 0 ORDER BY balance DESC");
+        while($c = $res->fetch_assoc()){ 
+            $msg = urlencode("Hello ".$c['name'].", your ISP bill of Rs ".$c['balance']." is pending.");
+        ?>
+        <div class="card" style="border-left: 5px solid #e74c3c;">
+            <b><?php echo $c['name']; ?></b> (<?php echo $c['area']; ?>)<br>
+            <span style="color:red;">Due: Rs <?php echo $c['balance']; ?></span>
+            <div style="display:flex; gap:5px; margin-top:10px;">
+                <button onclick="openPay(<?php echo $c['id']; ?>, '<?php echo $c['name']; ?>')" style="flex:1; background:#2c3e50; color:white; border:none; border-radius:5px;">Pay Now</button>
+                <button onclick="openExtra(<?php echo $c['id']; ?>, '<?php echo $c['name']; ?>')" style="flex:1; background:#e67e22; color:white; border:none; border-radius:5px;">🔧 Extra</button>
+                <a href="https://wa.me/<?php echo $c['phone']; ?>?text=<?php echo $msg; ?>" class="whatsapp-btn">WA</a>
+            </div>
+        </div>
+        <?php } ?>
+    </div>
 
-        <section id="view-settings" class="hidden">
-            <div class="card">
-                <h4>System Configuration</h4>
-                <label class="stat-label">Manage Areas/Villages</label>
-                <div style="display:flex; gap:8px; margin-top:8px;">
-                    <input type="text" id="newVillage" class="search-input" style="padding:10px" placeholder="Village Name">
-                    <button onclick="addVillage()" class="btn btn-primary" style="width:100px; margin:0;">Add</button>
-                </div>
-                <div id="villageBadges" style="margin-top:15px; display:flex; flex-wrap:wrap; gap:5px;"></div>
-            </div>
-            <div class="card">
-                <h4>Data Management</h4>
-                <button onclick="exportBackup()" class="btn btn-ghost">📥 Download JSON Backup</button>
-            </div>
-        </section>
-    </main>
+    <div id="total_cust" class="page" style="display:none;">
+        <h3>👥 All Customers</h3>
+        <div class="card" style="padding:0; overflow-x:auto;">
+            <table id="allCustTable">
+                <tr style="background:#eee;"><th>Name/Area</th><th>Action</th></tr>
+                <?php
+                $res = $conn->query("SELECT * FROM customers ORDER BY name ASC");
+                while($c = $res->fetch_assoc()){
+                    echo "<tr>
+                            <td><b>".$c['name']."</b><br><small>".$c['area']."</small></td>
+                            <td>
+                                <a href='#' onclick='openEdit(".json_encode($c).")' style='text-decoration:none;'>✏️</a> | 
+                                <a href='?delete_id=".$c['id']."' onclick='return confirm(\"Delete?\")' style='color:red; text-decoration:none;'>🗑️</a>
+                            </td>
+                          </tr>"; 
+                }
+                ?>
+            </table>
+        </div>
+    </div>
+
+    <div id="pay_history" class="page" style="display:none;">
+        <h3>📜 Payment & Extra Logs</h3>
+        <div class="card" style="padding:0; overflow-x:auto;">
+            <table>
+                <tr style="background:#eee;"><th>Customer</th><th>Amount/Reason</th></tr>
+                <?php
+                $pay_res = $conn->query("SELECT p.*, c.name FROM payments p JOIN customers c ON p.cust_id = c.id ORDER BY p.id DESC LIMIT 30");
+                while($p = $pay_res->fetch_assoc()){
+                    $type_label = ($p['amount'] > 0) ? "<span style='color:green;'>Received: Rs ".$p['amount']."</span>" : "<span style='color:orange;'>".$p['billing_month']."</span>";
+                    echo "<tr>
+                            <td><b>".$p['name']."</b></td>
+                            <td>$type_label<br><small>".$p['staff_name']."</small></td>
+                          </tr>";
+                }
+                ?>
+            </table>
+        </div>
+    </div>
 </div>
 
-<nav class="nav-bar">
-    <button class="nav-item active" onclick="switchView('billing', this)">
-        <span class="nav-icon">📊</span>Dashboard
-    </button>
-    <button class="nav-item" onclick="switchView('customers', this)">
-        <span class="nav-icon">👥</span>Customers
-    </button>
-    <button class="nav-item" onclick="switchView('settings', this)">
-        <span class="nav-icon">⚙️</span>Settings
-    </button>
-</nav>
+<div id="payModal" class="modal">
+    <div class="card" style="width:85%; margin:100px auto;">
+        <h3 id="p_name"></h3>
+        <form method="POST" onsubmit="return !offlinePay(this.cid.value, this.amt.value)">
+            <input type="hidden" name="cid" id="p_id">
+            <input type="number" name="amt" placeholder="Amount (Rs)" required>
+            <button name="pay_bill" class="btn">Confirm Payment</button>
+            <button type="button" onclick="closeModal()" class="btn" style="background:grey; margin-top:5px;">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<div id="extraModal" class="modal">
+    <div class="card" style="width:85%; margin:80px auto;">
+        <h3 id="ex_name"></h3>
+        <form method="POST">
+            <input type="hidden" name="cid" id="ex_id">
+            <input type="number" name="extra_amount" placeholder="Amount to Add" required>
+            <input type="text" name="reason" placeholder="Reason (Wire, Router etc)" required>
+            <button name="add_extra" class="btn" style="background:#e67e22;">Add to Bill</button>
+            <button type="button" onclick="document.getElementById('extraModal').style.display='none'" class="btn" style="background:grey; margin-top:5px;">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<div id="editModal" class="modal">
+    <div class="card" style="width:85%; margin:50px auto; max-height:80vh; overflow-y:auto;">
+        <h3>Edit Customer</h3>
+        <form method="POST">
+            <input type="hidden" name="edit_id" id="e_id">
+            <input name="name" id="e_name" required>
+            <input name="phone" id="e_phone" required>
+            <select name="area" id="e_area">
+                <?php foreach($vs as $v) { echo "<option value='$v'>$v</option>"; } ?>
+            </select>
+            <label>Monthly Bill:</label><input type="number" name="bill" id="e_bill" required>
+            <label>Current Balance:</label><input type="number" name="balance" id="e_balance" required>
+            <button name="update_customer" class="btn">Update Details</button>
+            <button type="button" onclick="closeEditModal()" class="btn" style="background:grey; margin-top:5px;">Cancel</button>
+        </form>
+    </div>
+</div>
 
 <script>
-    // System State Management
-    const DB = {
-        customers: JSON.parse(localStorage.getItem("isp_pro_cust")) || [],
-        invoices: JSON.parse(localStorage.getItem("isp_pro_inv")) || [],
-        villages: JSON.parse(localStorage.getItem("isp_pro_vill")) || ["Default"]
-    };
+function openNav() { document.getElementById("mySidebar").style.width = "260px"; }
+function closeNav() { document.getElementById("mySidebar").style.width = "0"; }
+function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+    document.getElementById(id).style.display = 'block';
+    closeNav();
+}
 
-    function syncDB() {
-        localStorage.setItem("isp_pro_cust", JSON.stringify(DB.customers));
-        localStorage.setItem("isp_pro_inv", JSON.stringify(DB.invoices));
-        localStorage.setItem("isp_pro_vill", JSON.stringify(DB.villages));
-        updateHeaderStats();
+function openPay(id, name) {
+    document.getElementById('p_id').value = id;
+    document.getElementById('p_name').innerText = "Pay: " + name;
+    document.getElementById('payModal').style.display = 'block';
+}
+function closeModal() { document.getElementById('payModal').style.display = 'none'; }
+
+function openEdit(c) {
+    document.getElementById('e_id').value = c.id;
+    document.getElementById('e_name').value = c.name;
+    document.getElementById('e_phone').value = c.phone;
+    document.getElementById('e_area').value = c.area;
+    document.getElementById('e_bill').value = c.bill_amount;
+    document.getElementById('e_balance').value = c.balance;
+    document.getElementById('editModal').style.display = 'block';
+}
+function closeEditModal() { document.getElementById('editModal').style.display = 'none'; }
+
+function openExtra(id, name) {
+    document.getElementById('ex_id').value = id;
+    document.getElementById('ex_name').innerText = "Extra: " + name;
+    document.getElementById('extraModal').style.display = 'block';
+}
+
+function filterTable() {
+    let val = document.getElementById("custSearch").value.toUpperCase();
+    let rows = document.querySelector("#allCustTable").rows;
+    for (let i = 1; i < rows.length; i++) {
+        rows[i].style.display = rows[i].innerText.toUpperCase().includes(val) ? "" : "none";
     }
+}
 
-    // Billing Logic
-    function generateMonthlyInvoices() {
-        const monthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-        let newCount = 0;
+// --- OFFLINE & SERVICE WORKER ---
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+}
 
-        DB.customers.forEach(cust => {
-            const alreadyBilled = DB.invoices.some(i => i.custId === cust.id && i.month === monthYear);
-            
-            if (!alreadyBilled) {
-                // Calculate arrears from all previous unpaid invoices
-                const pendingBalance = DB.invoices
-                    .filter(i => i.custId === cust.id && !i.isPaid)
-                    .reduce((sum, i) => sum + i.amount + (i.arrears || 0), 0);
+window.addEventListener('online', () => {
+    document.getElementById('online_status').innerText = "● Online";
+    document.getElementById('online_status').style.color = "#2ecc71";
+    syncOfflineData();
+});
+window.addEventListener('offline', () => {
+    document.getElementById('online_status').innerText = "● Offline";
+    document.getElementById('online_status').style.color = "#e74c3c";
+});
 
-                DB.invoices.push({
-                    id: 'INV-' + Date.now() + Math.floor(Math.random()*1000),
-                    custId: cust.id,
-                    month: monthYear,
-                    amount: cust.price,
-                    arrears: pendingBalance,
-                    isPaid: false,
-                    createdAt: new Date().toISOString()
-                });
-                newCount++;
-            }
+// IndexedDB for Offline Actions
+let db;
+const req = indexedDB.open("ISP_Offline", 1);
+req.onupgradeneeded = e => e.target.result.createObjectStore("actions", { keyPath: "id", autoIncrement: true });
+req.onsuccess = e => db = e.target.result;
+
+function saveOffline(type, data) {
+    const tx = db.transaction("actions", "readwrite");
+    tx.objectStore("actions").add({ type, data });
+    alert("Saved Offline! Will sync when internet returns.");
+}
+
+function offlineAddCust(name, phone, area, bill) {
+    if (!navigator.onLine) { saveOffline('ADD_CUST', {name, phone, area, bill}); return true; }
+    return false;
+}
+function offlinePay(cid, amt) {
+    if (!navigator.onLine) { saveOffline('PAY_BILL', {cid, amt}); closeModal(); return true; }
+    return false;
+}
+
+async function syncOfflineData() {
+    const tx = db.transaction("actions", "readonly");
+    const actions = await new Promise(r => tx.objectStore("actions").getAll().onsuccess = e => r(e.target.result));
+    if (actions.length > 0) {
+        const res = await fetch('sync_handler.php', {
+            method: 'POST',
+            body: JSON.stringify(actions)
         });
-
-        if(newCount > 0) {
-            syncDB();
-            renderBilling();
-            alert(`Success: ${newCount} invoices generated for ${monthYear}`);
-        } else {
-            alert("No new invoices needed for this month.");
+        if (res.ok) {
+            db.transaction("actions", "readwrite").objectStore("actions").clear();
+            alert("All offline data synced!");
+            location.reload();
         }
     }
-
-    function markInvoiceAsPaid(invId) {
-        const inv = DB.invoices.find(i => i.id === invId);
-        if (inv && confirm(`Mark Rs.${inv.amount + inv.arrears} as received?`)) {
-            inv.isPaid = true;
-            inv.paidAt = new Date().toLocaleString();
-            syncDB();
-            renderBilling();
-        }
-    }
-
-    // View Rendering
-    function renderBilling() {
-        const query = document.getElementById("searchName").value.toLowerCase();
-        const list = document.getElementById("billingList");
-        list.innerHTML = "";
-
-        // Only show unpaid invoices in the dashboard for focus
-        const unpaidInvoices = DB.invoices.filter(i => !i.isPaid);
-        
-        unpaidInvoices.forEach(inv => {
-            const cust = DB.customers.find(c => c.id === inv.custId);
-            if (!cust) return;
-
-            if (cust.name.toLowerCase().includes(query) || cust.village.toLowerCase().includes(query)) {
-                const total = inv.amount + (inv.arrears || 0);
-                const card = `
-                    <div class="card">
-                        <div class="flex-between">
-                            <div>
-                                <span class="badge badge-unpaid">${inv.month}</span>
-                                <h3 style="margin: 8px 0 2px 0; font-size:16px;">${cust.name}</h3>
-                                <div style="font-size: 12px; color: var(--text-muted);">📍 ${cust.village}</div>
-                            </div>
-                            <div style="text-align: right">
-                                <div style="font-size: 18px; font-weight: 800; color: var(--primary);">Rs. ${total}</div>
-                                ${inv.arrears > 0 ? `<div style="font-size:10px; color:var(--danger)">Incl. Arrears: ${inv.arrears}</div>` : ''}
-                            </div>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
-                            <a href="https://wa.me/${cust.phone.replace(/\+/g,'')}?text=Dear ${cust.name}, your ISP bill for ${inv.month} is Rs.${total}. Please pay to avoid service interruption." 
-                               target="_blank" class="btn btn-wa" style="margin:0; font-size:12px;">WhatsApp Bill</a>
-                            <button onclick="markInvoiceAsPaid('${inv.id}')" class="btn btn-primary" style="margin:0; font-size:12px;">Receive Cash</button>
-                        </div>
-                    </div>
-                `;
-                list.innerHTML += card;
-            }
-        });
-    }
-
-    function switchView(viewId, btn) {
-        document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
-        document.getElementById('view-' + viewId).classList.remove('hidden');
-        
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        btn.classList.add('active');
-
-        if(viewId === 'customers') renderMasterCustomers();
-        if(viewId === 'settings') renderVillages();
-    }
-
-    function updateHeaderStats() {
-        const received = DB.invoices.filter(i => i.isPaid).reduce((s, i) => s + i.amount + (i.arrears || 0), 0);
-        const pending = DB.invoices.filter(i => !i.isPaid).reduce((s, i) => s + i.amount + (i.arrears || 0), 0);
-        
-        document.getElementById("statPaid").innerText = `Rs. ${received.toLocaleString()}`;
-        document.getElementById("statUnpaid").innerText = `Rs. ${pending.toLocaleString()}`;
-        document.getElementById("statTotalCust").innerText = DB.customers.length;
-    }
-
-    // Initialization
-    document.getElementById("currentDate").innerText = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    syncDB();
-    renderBilling();
+}
 </script>
 </body>
 </html>
